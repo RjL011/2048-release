@@ -1,0 +1,389 @@
+<!DOCTYPE html><html lang="ru"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>2048</title>
+<style>
+:root{
+  --background-color:#faf8ef;--grid-color:#bbada0;--tile-color:#cdc1b4;
+  --accent-button-color:#8f7a66;--txt:#776e65;--tile-txt:#776e65;
+  --t2:#eee4da;--t2c:#776e65;--t4:#ede0c8;--t4c:#776e65;
+  --t8:#f2b179;--t8c:#f9f6f2;--t16:#f59563;--t16c:#f9f6f2;
+  --t32:#f67c5f;--t32c:#f9f6f2;--t64:#f65e3b;--t64c:#f9f6f2;
+  --t128:#edcf72;--t128c:#776e65;--t256:#edcc61;--t256c:#776e65;
+  --t512:#edc850;--t512c:#776e65;--t1024:#edc53f;--t1024c:#776e65;
+  --t2048:#edc22e;--t2048c:#776e65
+}
+*{box-sizing:border-box}
+body{margin:0;min-height:100dvh;background:var(--background-color);color:var(--txt);font:15px/1.35 system-ui,sans-serif;padding:max(8px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));-webkit-tap-highlight-color:transparent}
+#topbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.mode{display:flex;gap:4px;flex-wrap:wrap;flex:1}
+.mode button,.btn{border:0;border-radius:10px;padding:7px 11px;background:var(--accent-button-color);color:var(--btn-txt,#f9f6f2);font-weight:600;cursor:pointer;font-size:.82rem;transition:opacity .15s}
+.mode button.off,.btn:disabled{opacity:.4;cursor:not-allowed}
+.score-chip{background:transparent;border:2px solid var(--accent-button-color);color:var(--txt);padding:5px 14px;border-radius:10px;font-weight:700;font-size:.95rem;white-space:nowrap;letter-spacing:.02em}
+.grid-wrap{max-width:min(100vw - 16px,420px);margin:0 auto}
+.board{background:var(--grid-color);border-radius:12px;padding:6px;display:grid;gap:6px;position:relative;touch-action:none;outline:none;cursor:pointer}
+.tile{border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:var(--fs,1.5rem);background:var(--tile-color);color:var(--tile-txt);transition:transform .08s;user-select:none;min-width:0;min-height:0;width:100%;height:100%;aspect-ratio:1}
+.tile.new{animation:tileIn .12s ease-out}
+.tile.merged{animation:tileMerge .14s ease-out}
+@keyframes tileIn{from{opacity:0}to{opacity:1}}
+@keyframes tileMerge{0%{opacity:.6}100%{opacity:1}}
+.tile.sel{outline:3px solid var(--accent-button-color);outline-offset:-2px}
+.tile.v2{background:var(--t2);color:var(--t2c)}
+.tile.v4{background:var(--t4);color:var(--t4c)}
+.tile.v8{background:var(--t8);color:var(--t8c)}
+.tile.v16{background:var(--t16);color:var(--t16c)}
+.tile.v32{background:var(--t32);color:var(--t32c)}
+.tile.v64{background:var(--t64);color:var(--t64c)}
+.tile.v128{background:var(--t128);color:var(--t128c);font-size:calc(var(--fs,.9rem)*.85)}
+.tile.v256{background:var(--t256);color:var(--t256c)}
+.tile.v512{background:var(--t512);color:var(--t512c)}
+.tile.v1024{background:var(--t1024);color:var(--t1024c);font-size:calc(var(--fs,.9rem)*.75)}
+.tile.v2048{background:var(--t2048);color:var(--t2048c);font-size:calc(var(--fs,.9rem)*.7)}
+.rowbar{display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap}
+footer{margin-top:12px;display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.overlay{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;padding:16px;z-index:20}
+.overlay.on{display:flex}
+.panel{background:var(--grid-color);border-radius:14px;padding:16px;max-width:370px;width:100%;max-height:88vh;overflow:auto;color:var(--panel-txt,var(--txt))}
+.panel h2{margin:0 0 10px;font-size:1.1rem;color:inherit}
+.panel label{display:block;margin:8px 0 3px;font-size:.83rem;opacity:.85;color:inherit}
+input[type=color]{width:100%;height:34px;border:0;border-radius:8px;cursor:pointer;padding:2px}
+input[type=number]{width:100%;padding:8px;border:0;border-radius:8px;font-size:1rem;background:var(--background-color);color:var(--txt);margin-top:2px}
+.lb-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--background-color)}
+.lb-item:last-child{border:0}
+.pill-row{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px}
+.pill{border:0;border-radius:8px;padding:6px 13px;background:var(--tile-color);color:var(--pill-txt,var(--panel-txt,var(--txt)));font-weight:600;cursor:pointer;font-size:.82rem}
+.pill.active{background:var(--accent-button-color);color:#f9f6f2}
+.sep{height:1px;background:var(--background-color);margin:10px 0}
+.sw-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0}
+.sw{position:relative;display:inline-block;width:46px;height:26px;flex-shrink:0}
+.sw input{opacity:0;width:0;height:0;position:absolute}
+.sw-sl{position:absolute;inset:0;background:var(--tile-color);border-radius:13px;cursor:pointer;transition:.22s}
+.sw-sl:before{content:'';position:absolute;left:4px;top:4px;width:18px;height:18px;background:#fff;border-radius:50%;transition:.22s;box-shadow:0 1px 3px #0004}
+.sw input:checked+.sw-sl{background:var(--accent-button-color)}
+.sw input:checked+.sw-sl:before{transform:translateX(20px);background:var(--btn-txt,#f9f6f2)}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:9px 18px;border-radius:20px;font-size:.85rem;z-index:999;animation:toastIn .3s ease;pointer-events:none;white-space:nowrap}
+@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(14px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+</style>
+</head><body>
+<div id="topbar">
+  <div class="mode" id="modes"></div>
+  <div class="score-chip"><span id="sc">0</span></div>
+</div>
+<div class="grid-wrap"><div class="board" id="bd" tabindex="0"></div></div>
+<div class="rowbar">
+  <button class="btn" id="u">— <span id="uc">3/3</span></button>
+  <button class="btn" id="del">— <span id="dc">3/3</span></button>
+  <button class="btn" id="nw">—</button>
+</div>
+<footer>
+  <button class="btn" id="st">—</button>
+  <button class="btn" id="lb">—</button>
+</footer>
+<div class="overlay" id="ov"><div class="panel" id="pnl"></div></div>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script>
+const W=window.Telegram?.WebApp;W?.ready();W?.expand();
+
+/* ── Translations ── */
+const LANGS={
+  ru:{score:'Очки',newGame:'Новая',settings:'Настройки',records:'Рекорды',undo:'Отмена',del:'Удалить',mode3:'3×3 Hardcore',mode4:'4×4 Classic',mode8:'8×8 Infinity',modeCustom:'Свой',settingsTitle:'Настройки',langLabel:'Язык',themeLabel:'Тема',darkTheme:'Тёмная',lightTheme:'Светлая',bloodyTheme:'Кровавая',resetTheme:'Сбросить',customizeBtn:'Цвета →',fontLabel:'Шрифт',fontBtn:'Шрифты →',close:'Закрыть',back:'← Назад',recTitle:'Личные рекорды',recEmpty:'Пока пусто — завершите игру, и счёт запишется сам',recTime:'Время',recNA:'Рекорды недоступны в режиме «Свой»',customTitle:'Свой размер поля',rows:'Строки',cols:'Столбцы',startGame:'Начать',bgColor:'Фон страницы',gridColor:'Рамка поля',emptyTile:'Пустые ячейки',accentColor:'Кнопки',tile:'Плитка',share:'Поделиться',worldTop:'Мировой топ',achTitle:'Достижения',soundLabel:'Звук',
+    a_tile128_l:'Плитка 128',a_tile128_h:'Соберите плитку 128 в любом режиме',a_tile2048c_l:'2048 Classic',a_tile2048c_h:'Соберите плитку 2048 в режиме 4×4',a_tile512h_l:'512 Hardcore',a_tile512h_h:'Соберите плитку 512 в режиме 3×3',a_tile8192i_l:'8192 Infinity',a_tile8192i_h:'Соберите плитку 8192 в режиме 8×8',a_fullhouse_l:'Full House',a_fullhouse_h:'Истратьте все 6 бустеров за одну игру',a_natural_l:'Natural',a_natural_h:'Достигните 2048 не используя бустеры',a_speedster_l:'Speedster',a_speedster_h:'Соберите 2048 менее чем за 5 минут',a_architect_l:'Architect',a_architect_h:'Сыграйте партию в режиме «Свой»',a_stylist_l:'Stylist',a_stylist_h:'Смените тему оформления в настройках',a_polyglot_l:'Polyglot',a_polyglot_h:'Смените язык интерфейса в настройках'},
+  en:{score:'Score',newGame:'New',settings:'Settings',records:'Records',undo:'Undo',del:'Delete',mode3:'3×3 Hardcore',mode4:'4×4 Classic',mode8:'8×8 Infinity',modeCustom:'Custom',settingsTitle:'Settings',langLabel:'Language',themeLabel:'Theme',darkTheme:'Dark',lightTheme:'Light',bloodyTheme:'Bloody',resetTheme:'Reset',customizeBtn:'Colors →',fontLabel:'Font',fontBtn:'Fonts →',close:'Close',back:'← Back',recTitle:'Personal Records',recEmpty:'No records yet — finish a game and your score saves automatically',recTime:'Time',recNA:'Records unavailable in Custom mode',customTitle:'Custom Grid Size',rows:'Rows',cols:'Columns',startGame:'Start',bgColor:'Background',gridColor:'Grid border',emptyTile:'Empty tiles',accentColor:'Buttons',tile:'Tile',share:'Share',worldTop:'World Top',achTitle:'Achievements',soundLabel:'Sound',
+    a_tile128_l:'Tile 128',a_tile128_h:'Reach tile 128 in any mode',a_tile2048c_l:'2048 Classic',a_tile2048c_h:'Reach tile 2048 in 4×4 mode',a_tile512h_l:'512 Hardcore',a_tile512h_h:'Reach tile 512 in 3×3 mode',a_tile8192i_l:'8192 Infinity',a_tile8192i_h:'Reach tile 8192 in 8×8 mode',a_fullhouse_l:'Full House',a_fullhouse_h:'Use all 6 boosters in one game',a_natural_l:'Natural',a_natural_h:'Reach 2048 without using any boosters',a_speedster_l:'Speedster',a_speedster_h:'Reach 2048 in under 5 minutes',a_architect_l:'Architect',a_architect_h:'Play a game in Custom mode',a_stylist_l:'Stylist',a_stylist_h:'Change the theme in settings',a_polyglot_l:'Polyglot',a_polyglot_h:'Change the interface language in settings'},
+  pl:{score:'Punkty',newGame:'Nowa',settings:'Ustawienia',records:'Rekordy',undo:'Cofnij',del:'Usuń',mode3:'3×3 Hardcore',mode4:'4×4 Classic',mode8:'8×8 Infinity',modeCustom:'Własny',settingsTitle:'Ustawienia',langLabel:'Język',themeLabel:'Motyw',darkTheme:'Ciemny',lightTheme:'Jasny',bloodyTheme:'Krwawa',resetTheme:'Resetuj',customizeBtn:'Kolory →',fontLabel:'Czcionka',fontBtn:'Czcionki →',close:'Zamknij',back:'← Wróć',recTitle:'Osobiste rekordy',recEmpty:'Brak rekordów — skończ grę, wynik zapisze się sam',recTime:'Czas',recNA:'Rekordy niedostępne w trybie własnym',customTitle:'Własny rozmiar planszy',rows:'Wiersze',cols:'Kolumny',startGame:'Graj',bgColor:'Tło',gridColor:'Obramowanie',emptyTile:'Puste pola',accentColor:'Przyciski',tile:'Kafelek',share:'Udostępnij',worldTop:'Świat Top',achTitle:'Osiągnięcia',soundLabel:'Dźwięk',
+    a_tile128_l:'Kafelek 128',a_tile128_h:'Osiągnij kafelek 128 w dowolnym trybie',a_tile2048c_l:'2048 Classic',a_tile2048c_h:'Osiągnij kafelek 2048 w trybie 4×4',a_tile512h_l:'512 Hardcore',a_tile512h_h:'Osiągnij kafelek 512 w trybie 3×3',a_tile8192i_l:'8192 Infinity',a_tile8192i_h:'Osiągnij kafelek 8192 w trybie 8×8',a_fullhouse_l:'Full House',a_fullhouse_h:'Użyj wszystkich 6 boosterów w jednej grze',a_natural_l:'Natural',a_natural_h:'Osiągnij 2048 bez używania boosterów',a_speedster_l:'Speedster',a_speedster_h:'Osiągnij 2048 w mniej niż 5 minut',a_architect_l:'Architect',a_architect_h:'Zagraj w trybie własnym',a_stylist_l:'Stylist',a_stylist_h:'Zmień motyw w ustawieniach',a_polyglot_l:'Polyglot',a_polyglot_h:'Zmień język interfejsu w ustawieniach'},
+  be:{score:'Ачкі',newGame:'Новая',settings:'Налады',records:'Рэкорды',undo:'Адмена',del:'Выдаліць',mode3:'3×3 Hardcore',mode4:'4×4 Classic',mode8:'8×8 Infinity',modeCustom:'Свой',settingsTitle:'Налады',langLabel:'Мова',themeLabel:'Тэма',darkTheme:'Цёмная',lightTheme:'Светлая',bloodyTheme:'Крывавая',resetTheme:'Скінуць',customizeBtn:'Колеры →',fontLabel:'Шрыфт',fontBtn:'Шрыфты →',close:'Зачыніць',back:'← Назад',recTitle:'Асабістыя рэкорды',recEmpty:'Пакуль пуста — завяршыце гульню, і вынік запішацца сам',recTime:'Час',recNA:'Рэкорды недаступны ва ўласным рэжыме',customTitle:'Свой памер поля',rows:'Радкі',cols:'Слупкі',startGame:'Пачаць',bgColor:'Фон старонкі',gridColor:'Рамка поля',emptyTile:'Пустыя вочкі',accentColor:'Кнопкі',tile:'Пліта',share:'Падзяліцца',worldTop:'Сусветны топ',achTitle:'Дасягненні',soundLabel:'Гук',
+    a_tile128_l:'Пліта 128',a_tile128_h:'Збярыце пліту 128 у любым рэжыме',a_tile2048c_l:'2048 Classic',a_tile2048c_h:'Збярыце пліту 2048 у рэжыме 4×4',a_tile512h_l:'512 Hardcore',a_tile512h_h:'Збярыце пліту 512 у рэжыме 3×3',a_tile8192i_l:'8192 Infinity',a_tile8192i_h:'Збярыце пліту 8192 у рэжыме 8×8',a_fullhouse_l:'Full House',a_fullhouse_h:'Патраціце ўсе 6 бустараў за адну гульню',a_natural_l:'Natural',a_natural_h:'Дасягніце 2048 без выкарыстання бустараў',a_speedster_l:'Speedster',a_speedster_h:'Збярыце 2048 менш чым за 5 хвілін',a_architect_l:'Architect',a_architect_h:'Сыграйце партыю ў рэжыме «Свой»',a_stylist_l:'Stylist',a_stylist_h:'Змяніце тэму афармлення ў наладах',a_polyglot_l:'Polyglot',a_polyglot_h:'Змяніце мову інтэрфейсу ў наладах'}
+};
+let lang=localStorage.getItem('m48_lang')||'ru';
+function tr(k){return(LANGS[lang]||LANGS.ru)[k]||(LANGS.ru[k]||k)}
+
+/* ── Theme ── */
+const TILE_VALS=[2,4,8,16,32,64,128,256,512,1024,2048];
+const DEFAULT_THEME={bg:'#faf8ef',gr:'#bbada0',tl:'#cdc1b4',ac:'#8f7a66',t2:'#eee4da',t4:'#ede0c8',t8:'#f2b179',t16:'#f59563',t32:'#f67c5f',t64:'#f65e3b',t128:'#edcf72',t256:'#edcc61',t512:'#edc850',t1024:'#edc53f',t2048:'#edc22e'};
+const DARK_THEME={bg:'#121212',gr:'#1e1e1e',tl:'#2d2d2d',ac:'#5c6bc0',t2:'#2d2d2d',t4:'#37474f',t8:'#455a64',t16:'#546e7a',t32:'#607d8b',t64:'#78909c',t128:'#90a4ae',t256:'#b0bec5',t512:'#cfd8dc',t1024:'#eceff1',t2048:'#e8eaf6'};
+const BLOODY_THEME={bg:'#0d0d0d',gr:'#1c1c1c',tl:'#2e2e2e',ac:'#c0392b',t2:'#3d3d3d',t4:'#2a2a2a',t8:'#5c0a0a',t16:'#7a0f0f',t32:'#991515',t64:'#b31c1c',t128:'#c42424',t256:'#d43030',t512:'#e03c3c',t1024:'#e84848',t2048:'#f05555'};
+const CYBERPUNK_THEME={bg:'#0a0010',gr:'#1a0030',tl:'#2a0050',ac:'#ff006e',t2:'#1e0040',t4:'#2a0060',t8:'#9900cc',t16:'#bf00ff',t32:'#ff006e',t64:'#ff0090',t128:'#00f5ff',t256:'#00d4ff',t512:'#00b3ff',t1024:'#ff4500',t2048:'#ffee00',font:''};
+const OLED_THEME={bg:'#000000',gr:'#0d0d0d',tl:'#1a1a1a',ac:'#e0e0e0',t2:'#242424',t4:'#363636',t8:'#4d4d4d',t16:'#636363',t32:'#7a7a7a',t64:'#929292',t128:'#a9a9a9',t256:'#c2c2c2',t512:'#d8d8d8',t1024:'#ececec',t2048:'#ffffff',font:''};
+const PAPER_THEME={bg:'#f4f1ea',gr:'#222222',tl:'#e8e3d8',ac:'#222222',t2:'#e8e3d8',t4:'#ddd8ca',t8:'#d2ccbb',t16:'#c6bfab',t32:'#bbb39c',t64:'#b0a78d',t128:'#a59b7e',t256:'#998f6f',t512:'#8e8360',t1024:'#837751',t2048:'#786b42',font:'Georgia,serif'};
+const Kt='m48_theme';
+function lum(hex){let r=parseInt(hex.slice(1,3),16)/255,g=parseInt(hex.slice(3,5),16)/255,b=parseInt(hex.slice(5,7),16)/255;return 0.299*r+0.587*g+0.114*b}
+function autoTc(hex){return lum(hex)>0.5?'#776e65':'#f9f6f2'}
+function applyTheme(j){
+  const s=document.documentElement.style;
+  if(j.bg){s.setProperty('--background-color',j.bg);let tc=lum(j.bg)>0.5?'#776e65':'#ddd';s.setProperty('--txt',tc);s.setProperty('--tile-txt',tc)}
+  if(j.gr)s.setProperty('--grid-color',j.gr);
+  if(j.tl)s.setProperty('--tile-color',j.tl);
+  if(j.ac)s.setProperty('--accent-button-color',j.ac);
+  TILE_VALS.forEach(v=>{if(j['t'+v]){s.setProperty('--t'+v,j['t'+v]);s.setProperty('--t'+v+'c',autoTc(j['t'+v]))}});
+  if(j.gr)s.setProperty('--panel-txt',lum(j.gr)>0.5?'#443c34':'#f0ece4');
+  if(j.tl)s.setProperty('--pill-txt',lum(j.tl)>0.5?'#443c34':'#f0ece4');
+  if(j.ac)s.setProperty('--btn-txt',lum(j.ac)>0.5?'#111':'#f9f6f2');
+  let uf=localStorage.getItem('m48_font');document.body.style.fontFamily=uf!==null?uf:(j.font||'');
+}
+function getTheme(){try{return JSON.parse(localStorage.getItem(Kt)||'{}')}catch(e){return{}}}
+function saveTheme(j){localStorage.setItem(Kt,JSON.stringify(j))}
+function initTheme(){applyTheme({...DEFAULT_THEME,...getTheme()})}
+
+/* ── Game state ── */
+const K=m=>'m48_'+m,Kl=m=>'m48_lb_'+m,Kgs=m=>'m48_gs_'+m;
+let R=4,C=4,M='4',G=[],S=0,B={u:3,d:3},H=[],bst=0,sel=null,lb=[],gStart=0,usedBoosters=false;
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+function isCustom(){return M==='custom'}
+
+/* ── Grid logic ── */
+function slide(a,N){let s=0,b=a.filter(x=>x),t=[],i=0;while(i<b.length){if(i+1<b.length&&b[i]==b[i+1]){t.push(b[i]*2);s+=b[i]*2;i+=2}else t.push(b[i++])}while(t.length<N)t.push(0);return{t,s,m:t.some((v,j)=>v!==a[j])}}
+function moveGrid(G,d,R,C){
+  let g=G.map(r=>r.slice()),S=0,ch=0;
+  if(d===0||d===2){
+    for(let i=0;i<R;i++){let L=g[i].slice();if(d===2)L.reverse();let{t,s,m}=slide(L,C);if(d===2)t.reverse();if(m)ch=1;S+=s;g[i]=t}
+  }else{
+    for(let j=0;j<C;j++){let L=[];for(let i=0;i<R;i++)L.push(g[i][j]);if(d===3)L.reverse();let{t,s,m}=slide(L,R);if(d===3)t.reverse();if(m)ch=1;S+=s;for(let i=0;i<R;i++)g[i][j]=t[i]}
+  }
+  return{g,S,ch}
+}
+function empty(r,c){return Array.from({length:r},()=>Array(c).fill(0))}
+function pick(G,r,c){let e=[];for(let i=0;i<r;i++)for(let j=0;j<c;j++)if(!G[i][j])e.push([i,j]);if(!e.length)return 0;let[ri,ci]=e[Math.random()*e.length|0];G[ri][ci]=Math.random()<.9?2:4;return 1}
+function canMove(g,r,c){for(let d=0;d<4;d++)if(moveGrid(g,d,r,c).ch)return 1;return 0}
+function fsFor(n){if(n<=3)return'clamp(1.4rem,9vw,2.2rem)';if(n<=4)return'clamp(1.1rem,7vw,1.75rem)';if(n<=6)return'clamp(.7rem,4vw,1.1rem)';if(n<=8)return'clamp(.55rem,2.8vw,.95rem)';return'clamp(.4rem,2vw,.7rem)'}
+
+/* ── Save / Load ── */
+function saveG(){localStorage.setItem(K(M),JSON.stringify({G,S,B,H,bst,R,C}))}
+function readG(){let x;try{x=JSON.parse(localStorage.getItem(K(M))||'null')}catch(e){x=null}return x}
+function loadGStart(){gStart=parseInt(localStorage.getItem(Kgs(M))||'0')||Date.now();localStorage.setItem(Kgs(M),gStart)}
+function fmtDur(s){if(!s||s<0)return'—';let h=s/3600|0,m=(s%3600)/60|0,ss=s%60;return h?(h+'ч '+m+'м'):(m?(m+'м '+ss+'с'):(ss+'с'))}
+function applySt(x){
+  if(x&&x.G&&x.G.length===R&&x.G[0]&&x.G[0].length===C){
+    G=x.G.map(r=>r.slice());S=x.S|0;B={u:x.B?.u??3,d:x.B?.d??3};H=Array.isArray(x.H)?x.H:[];bst=x.bst!=null?x.bst|0:Math.max(S,0)
+  }else{
+    G=empty(R,C);pick(G,R,C);pick(G,R,C);S=0;B={u:3,d:3};H=[];bst=0;localStorage.removeItem(Kgs(M))
+  }
+  loadGStart()
+}
+
+/* ── Records ── */
+function readLb(){try{lb=JSON.parse(localStorage.getItem(Kl(M))||'[]')}catch(e){lb=[]}if(!Array.isArray(lb))lb=[]}
+function writeLb(){localStorage.setItem(Kl(M),JSON.stringify(lb.slice(0,3)))}
+function user(){const u=W?.initDataUnsafe?.user||{};return{n:[u.first_name,u.last_name].filter(Boolean).join(' ')||u.username||'Игрок'}}
+function addLb(sc){readLb();let dur=gStart?Math.floor((Date.now()-gStart)/1000):0;let{n}=user();lb.push({n,sc,t:Date.now(),dur});lb.sort((a,b)=>b.sc-a.sc);lb=lb.slice(0,3);writeLb()}
+function qualifies(sc){readLb();return sc>0&&(lb.length<3||sc>(lb[lb.length-1]?.sc||0))}
+function autoSave(){if(!isCustom()&&S>0&&qualifies(S))addLb(S)}
+
+/* ── Sound Engine ── */
+let soundOn=localStorage.getItem('m48_sound')==='1';
+function setSoundOn(v){soundOn=v;localStorage.setItem('m48_sound',v?'1':'0')}
+const AC=new(window.AudioContext||window.webkitAudioContext||class{createOscillator(){return{type:'',frequency:{setValueAtTime:()=>{},exponentialRampToValueAtTime:()=>{}},connect:()=>{},start:()=>{},stop:()=>{}}}createGain(){return{gain:{setValueAtTime:()=>{},exponentialRampToValueAtTime:()=>{}},connect:()=>{}}}get destination(){}get currentTime(){return 0}})();
+function playSound(type){if(!soundOn)return;try{let o=AC.createOscillator(),g=AC.createGain(),t=AC.currentTime;o.connect(g);g.connect(AC.destination);if(type==='swipe'){o.type='square';o.frequency.setValueAtTime(600,t);g.gain.setValueAtTime(0.06,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.07);o.start(t);o.stop(t+0.07)}else if(type==='merge'){o.type='sine';o.frequency.setValueAtTime(440,t);o.frequency.exponentialRampToValueAtTime(880,t+0.12);g.gain.setValueAtTime(0.13,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.22);o.start(t);o.stop(t+0.22)}else if(type==='lose'){o.type='sawtooth';o.frequency.setValueAtTime(280,t);o.frequency.exponentialRampToValueAtTime(55,t+0.65);g.gain.setValueAtTime(0.18,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.7);o.start(t);o.stop(t+0.7)}}catch(e){}}
+
+/* ── Toast ── */
+function showToast(msg){let d=document.createElement('div');d.className='toast';d.textContent=msg;document.body.appendChild(d);setTimeout(()=>d.classList.add('fade'),2700);setTimeout(()=>d.remove(),3000)}
+
+/* ── Achievements ── */
+const ACH_DEF={
+  tile128: {icon:'🎯', lk:'a_tile128_l',  hk:'a_tile128_h'},
+  tile2048c:{icon:'🏆', lk:'a_tile2048c_l',hk:'a_tile2048c_h'},
+  tile512h: {icon:'💀', lk:'a_tile512h_l', hk:'a_tile512h_h'},
+  tile8192i:{icon:'♾️', lk:'a_tile8192i_l',hk:'a_tile8192i_h'},
+  fullhouse:{icon:'💰', lk:'a_fullhouse_l',hk:'a_fullhouse_h'},
+  natural:  {icon:'🌿', lk:'a_natural_l',  hk:'a_natural_h'},
+  speedster:{icon:'⚡', lk:'a_speedster_l',hk:'a_speedster_h'},
+  architect:{icon:'🏗️',lk:'a_architect_l',hk:'a_architect_h'},
+  stylist:  {icon:'🎨', lk:'a_stylist_l',  hk:'a_stylist_h'},
+  polyglot: {icon:'🌍', lk:'a_polyglot_l', hk:'a_polyglot_h'}
+};
+const Ka='m48_ach';
+function getAch(){try{return JSON.parse(localStorage.getItem(Ka)||'{}')}catch(e){return{}}}
+function unlockAch(id){let a=getAch();if(a[id])return;a[id]=Date.now();localStorage.setItem(Ka,JSON.stringify(a));let d=ACH_DEF[id];if(d)showToast(d.icon+' '+tr(d.lk)+'!')}
+function checkAch(){let max=0;for(let i=0;i<R;i++)for(let j=0;j<C;j++)max=Math.max(max,G[i][j]);if(max>=128)unlockAch('tile128');if(max>=2048&&M==='4')unlockAch('tile2048c');if(max>=512&&M==='3')unlockAch('tile512h');if(max>=8192&&M==='8')unlockAch('tile8192i');if(B.u===0&&B.d===0)unlockAch('fullhouse');if(max>=2048&&!usedBoosters)unlockAch('natural');if(max>=2048&&gStart&&(Date.now()-gStart)<300000)unlockAch('speedster')}
+
+/* ── Paint ── */
+let prevG=null;
+function paint(animNew,animMerged){
+  let b=$('#bd');
+  b.style.gridTemplateColumns=`repeat(${C},minmax(0,1fr))`;
+  b.style.gridTemplateRows=`repeat(${R},minmax(0,1fr))`;
+  b.style.aspectRatio=`${C}/${R}`;
+  b.style.setProperty('--fs',fsFor(Math.max(R,C)));
+  b.innerHTML='';
+  for(let i=0;i<R;i++)for(let j=0;j<C;j++){
+    let v=G[i][j],d=document.createElement('div');
+    let cls='tile'+(v?' v'+Math.min(v,2048):'')+(sel&&sel[0]===i&&sel[1]===j?' sel':'');
+    if(v&&animNew&&prevG&&!prevG[i][j])cls+=' new';
+    else if(v&&animMerged&&prevG&&prevG[i][j]&&v>prevG[i][j])cls+=' merged';
+    d.className=cls;
+    d.textContent=v||'';d.dataset.i=i;d.dataset.j=j;b.appendChild(d)
+  }
+  prevG=G.map(r=>r.slice());
+  $('#sc').textContent=S;
+  $('#uc').textContent=B.u+'/3';$('#dc').textContent=B.d+'/3';
+  $('#u').disabled=!B.u||!H.length;
+  $('#del').disabled=!B.d||!sel||!G[sel[0]][sel[1]];
+  $$('#modes button').forEach(x=>x.classList.toggle('off',x.dataset.m!=M));
+  let cu=$('[data-m="custom"]');
+  if(cu)cu.textContent=isCustom()?`${R}×${C}`:tr('modeCustom');
+  let ub=$('#u'),db=$('#del');
+  if(ub){ub.innerHTML=tr('undo')+' <span id="uc">'+B.u+'/3</span>'}
+  if(db){db.innerHTML=tr('del')+' <span id="dc">'+B.d+'/3</span>'}
+  $('#nw').textContent=tr('newGame');
+  $('#st').textContent=tr('settings');
+  $('#lb').textContent=tr('records');
+}
+
+/* ── Game actions ── */
+function pushH(){H.push({G:G.map(r=>r.slice()),S});if(H.length>30)H.shift()}
+function go(d){let r=moveGrid(G,d,R,C);if(!r.ch)return;playSound(r.S>0?'merge':'swipe');pushH();let pg=G.map(row=>row.slice());G=r.g;S+=r.S;bst=Math.max(bst,S);sel=null;pick(G,R,C);prevG=pg;saveG();paint(true,true);checkAch();if(!canMove(G,R,C)){playSound('lose');W?.HapticFeedback?.notificationOccurred?.('error');autoSave()}}
+function undo(){if(!B.u||!H.length)return;let x=H.pop();G=x.G.map(r=>r.slice());S=x.S;B.u--;usedBoosters=true;saveG();sel=null;paint()}
+function doDel(){if(!B.d||!sel)return;if(!G[sel[0]][sel[1]])return;G[sel[0]][sel[1]]=0;B.d--;usedBoosters=true;sel=null;saveG();paint()}
+function newG(){autoSave();G=empty(R,C);pick(G,R,C);pick(G,R,C);S=0;B={u:3,d:3};H=[];usedBoosters=false;gStart=Date.now();localStorage.setItem(Kgs(M),gStart);saveG();sel=null;paint()}
+function setM(m,r,c){
+  autoSave();saveG();M=m;
+  if(m==='custom'&&r&&c){R=r;C=c;localStorage.setItem('m48_crc',JSON.stringify({r,c}));unlockAch('architect')}
+  else if(m!=='custom'){R=C=+m}
+  applySt(readG());readLb();sel=null;paint()
+}
+
+/* ── Overlay helpers ── */
+function safeAlert(msg){try{if(W?.showAlert)W.showAlert(msg);else alert(msg)}catch(e){alert(msg)}}
+function closeOv(){$('#ov').classList.remove('on')}
+function openOv(html,cb){$('#ov').classList.add('on');$('#pnl').innerHTML=html;if(cb)cb()}
+
+/* ── Settings ── */
+function openSet(){
+  openOv(`<h2>${tr('settingsTitle')}</h2>
+<label>${tr('langLabel')}</label>
+<div class="pill-row">
+  ${['ru','en','pl','be'].map(l=>`<button class="pill${lang===l?' active':''}" onclick="setLang('${l}')">${l.toUpperCase()}</button>`).join('')}
+</div>
+<div class="sep"></div>
+<label>${tr('themeLabel')}</label>
+<div class="pill-row">
+  <button class="pill" onclick="applyPreset('light')">${tr('lightTheme')}</button>
+  <button class="pill" onclick="applyPreset('dark')">${tr('darkTheme')}</button>
+  <button class="pill" onclick="applyPreset('bloody')">${tr('bloodyTheme')}</button>
+</div>
+<div class="pill-row">
+  <button class="pill" onclick="applyPreset('cyberpunk')">Cyberpunk</button>
+  <button class="pill" onclick="applyPreset('oled')">OLED</button>
+  <button class="pill" onclick="applyPreset('paper')">Paper</button>
+</div>
+<div class="sep"></div>
+<div class="sw-row"><span style="font-size:.9rem;font-weight:600">${tr('soundLabel')}</span><label class="sw"><input type="checkbox" id="snd-cb" ${soundOn?'checked':''} onchange="setSoundOn(this.checked)"><span class="sw-sl"></span></label></div>
+<div class="sep"></div>
+<button class="btn" style="width:100%;margin-top:4px" onclick="openCustomize()">${tr('customizeBtn')}</button>
+<button class="btn" style="width:100%;margin-top:6px" onclick="openFonts()">${tr('fontBtn')}</button>
+<button class="btn" style="width:100%;margin-top:6px" onclick="openAch()">${tr('achTitle')}</button>
+<button class="btn" id="cl" style="width:100%;margin-top:8px">${tr('close')}</button>`);
+  $('#cl').onclick=closeOv;
+}
+
+function setLang(l){lang=l;localStorage.setItem('m48_lang',l);unlockAch('polyglot');closeOv();buildModes();paint();openSet()}
+
+function applyPreset(p){
+  const map={light:DEFAULT_THEME,dark:DARK_THEME,bloody:BLOODY_THEME,cyberpunk:CYBERPUNK_THEME,oled:OLED_THEME,paper:PAPER_THEME};
+  if(p==='reset'){saveTheme({});applyTheme({...DEFAULT_THEME,font:''});localStorage.removeItem('m48_font');closeOv();openSet();return}
+  let j={...map[p]};
+  saveTheme(j);applyTheme(j);unlockAch('stylist');closeOv();openSet()
+}
+
+/* ── Font picker ── */
+const FONTS=[
+  {n:'System',v:''},
+  {n:'Mono',v:'Courier New,monospace'},
+  {n:'Serif',v:'Georgia,serif'},
+  {n:'Arial',v:'Arial,sans-serif'}
+];
+function openFonts(){
+  let cur=localStorage.getItem('m48_font')||'';
+  let btns=FONTS.map((f,i)=>`<button class="pill${cur===f.v?' active':''}" data-fi="${i}" onclick="setFontIdx(this.dataset.fi)">${f.n}</button>`).join('');
+  openOv(`<h2>${tr('fontLabel')}</h2>
+<div class="pill-row" style="flex-wrap:wrap">${btns}</div>
+<button class="btn" id="bk" style="width:100%;margin-top:8px">${tr('back')}</button>`);
+  $('#bk').onclick=()=>{closeOv();openSet()}
+}
+function setFontIdx(i){let v=FONTS[+i].v;localStorage.setItem('m48_font',v);document.body.style.fontFamily=v;closeOv();openFonts()}
+
+/* ── Customization ── */
+function openCustomize(){
+  let j={...DEFAULT_THEME,...getTheme()};
+  let tileRows=TILE_VALS.map(v=>`<label>${tr('tile')} ${v}</label><input type="color" id="ct${v}" value="${j['t'+v]||DEFAULT_THEME['t'+v]}">`).join('');
+  openOv(`<h2>${tr('customizeBtn').replace(' →','')}</h2>
+<label>${tr('bgColor')}</label><input type="color" id="cbg" value="${j.bg||DEFAULT_THEME.bg}">
+<label>${tr('gridColor')}</label><input type="color" id="cgr" value="${j.gr||DEFAULT_THEME.gr}">
+<label>${tr('emptyTile')}</label><input type="color" id="ctl" value="${j.tl||DEFAULT_THEME.tl}">
+<label>${tr('accentColor')}</label><input type="color" id="cac" value="${j.ac||DEFAULT_THEME.ac}">
+<div class="sep"></div>
+${tileRows}
+<button class="btn" style="width:100%;margin-top:12px" onclick="closeOv()">${tr('close')}</button>
+<button class="btn" style="width:100%;margin-top:6px" onclick="openSet()">${tr('back')}</button>`,
+  ()=>{
+    function upd(){
+      let nj={bg:$('#cbg').value,gr:$('#cgr').value,tl:$('#ctl').value,ac:$('#cac').value};
+      TILE_VALS.forEach(v=>{let el=$('#ct'+v);if(el)nj['t'+v]=el.value});
+      saveTheme(nj);applyTheme(nj)
+    }
+    ['cbg','cgr','ctl','cac',...TILE_VALS.map(v=>'ct'+v)].forEach(id=>{let el=$('#'+id);if(el)el.oninput=upd})
+  })
+}
+
+/* ── Records panel ── */
+function openLb(){
+  if(isCustom()){
+    openOv(`<h2>${tr('recTitle')}</h2><p style="opacity:.7">${tr('recNA')}</p><button class="btn" id="cl" style="width:100%;margin-top:10px">${tr('close')}</button>`);
+    $('#cl').onclick=closeOv;return
+  }
+  readLb();
+  let items=lb.length?lb.map((x,i)=>`<div class="lb-item"><div style="width:28px;font-weight:700">#${i+1}</div><div style="flex:1"><b>${x.sc}</b><br><small style="opacity:.75">${tr('recTime')}: ${fmtDur(x.dur)}</small></div></div>`).join(''):`<p style="opacity:.7">${tr('recEmpty')}</p>`;
+  openOv(`<h2>${tr('recTitle')} (${R}×${C})</h2>${items}<button class="btn" id="cl" style="width:100%;margin-top:10px">${tr('close')}</button>`);
+  $('#cl').onclick=closeOv
+}
+
+/* ── Custom mode dialog ── */
+function openCustomMode(){
+  let saved={r:5,c:5};try{saved=JSON.parse(localStorage.getItem('m48_crc')||'{}')||saved}catch(e){}
+  openOv(`<h2>${tr('customTitle')}</h2>
+<label>${tr('rows')} (3–10)</label><input type="number" id="cr" min="3" max="10" value="${saved.r||5}">
+<label>${tr('cols')} (3–10)</label><input type="number" id="cc" min="3" max="10" value="${saved.c||5}">
+<button class="btn" style="width:100%;margin-top:12px" id="cstart">${tr('startGame')}</button>
+<button class="btn" style="width:100%;margin-top:6px" id="cl">${tr('close')}</button>`);
+  $('#cl').onclick=closeOv;
+  $('#cstart').onclick=()=>{
+    let r=Math.min(10,Math.max(3,parseInt($('#cr').value)||5));
+    let c=Math.min(10,Math.max(3,parseInt($('#cc').value)||5));
+    closeOv();setM('custom',r,c)
+  }
+}
+
+/* ── Achievements panel ── */
+function openAch(){
+  let a=getAch();
+  let rows=Object.entries(ACH_DEF).map(([id,d])=>`<div class="lb-item"><div style="width:30px;font-size:1.2rem;flex-shrink:0">${a[id]?d.icon:'🔒'}</div><div style="flex:1;opacity:${a[id]?1:.55}"><b style="font-size:.9rem">${tr(d.lk)}</b><br><span style="font-size:.75rem;opacity:.75">${tr(d.hk)}</span></div></div>`).join('');
+  openOv(`<h2>${tr('achTitle')}</h2>${rows}<button class="btn" id="cl" style="width:100%;margin-top:10px">${tr('close')}</button>`);
+  $('#cl').onclick=closeOv
+}
+
+/* ── Build mode buttons ── */
+function buildModes(){
+  $('#modes').innerHTML=[3,4,8].map(n=>`<button data-m="${n}">${tr('mode'+n)}</button>`).join('')+`<button data-m="custom">${isCustom()?`${R}×${C}`:tr('modeCustom')}</button>`;
+  $$('#modes button').forEach(btn=>{
+    btn.onclick=()=>btn.dataset.m==='custom'?openCustomMode():setM(btn.dataset.m)
+  })
+}
+
+/* ── Input handling ── */
+let skipTap=0,x0,y0;const bd=$('#bd');
+bd.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button!==0)return;x0=e.clientX;y0=e.clientY;try{bd.setPointerCapture(e.pointerId)}catch(z){}});
+bd.addEventListener('pointerup',e=>{let dx=e.clientX-x0,dy=e.clientY-y0,dist=Math.hypot(dx,dy);try{bd.releasePointerCapture(e.pointerId)}catch(z){};if(dist<28)return;skipTap=1;setTimeout(()=>{skipTap=0},80);Math.abs(dx)>Math.abs(dy)?go(dx>0?2:0):go(dy>0?3:1)});
+bd.addEventListener('pointercancel',e=>{try{bd.releasePointerCapture(e.pointerId)}catch(z){}});
+bd.addEventListener('click',e=>{if(skipTap)return;let tile=e.target.closest('.tile');if(!tile)return;let i=+tile.dataset.i,j=+tile.dataset.j;if(!G[i][j]){sel=null;paint();return}sel=[i,j];paint()});
+$('#u').onclick=undo;$('#del').onclick=doDel;$('#nw').onclick=newG;
+$('#st').onclick=openSet;$('#lb').onclick=openLb;
+document.addEventListener('keydown',e=>{const k=e.key;if(!['ArrowLeft','ArrowUp','ArrowRight','ArrowDown'].includes(k))return;e.preventDefault();k==='ArrowLeft'?go(0):k==='ArrowUp'?go(1):k==='ArrowRight'?go(2):go(3)});
+
+/* ── Init ── */
+initTheme();
+buildModes();
+applySt(readG());
+readLb();
+paint();
+bd.focus({preventScroll:1});
+</script></body></html>
